@@ -1,0 +1,177 @@
+{
+  "main": {
+    "id": "078a3809fc0e1ccc",
+    "type": "split",
+    "children": [
+      {
+        "id": "6c63eb293ef0a7dc",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "7c3941a67b9913b7",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "k8s/安装Docker.md",
+                "mode": "source",
+                "source": false
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "cc7ecf7605f46ccf",
+    "type": "split",
+    "children": [
+      {
+        "id": "972faa3e2b012802",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "721d4ab987c3c370",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical"
+              }
+            }
+          },
+          {
+            "id": "15f38145f79dcf4b",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "20200627191550453",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              }
+            }
+          },
+          {
+            "id": "6c8b6c397f307e03",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {}
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "aa79eca75ccd3533",
+    "type": "split",
+    "children": [
+      {
+        "id": "0c814dbefe41ed69",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "888582754f204e59",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "k8s/安装Docker.md",
+                "collapseAll": true,
+                "extraContext": true,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "f262db5ddb456588",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "k8s/安装Docker.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "78038d1d5e4cb720",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true
+              }
+            }
+          },
+          {
+            "id": "b9894b49df892be5",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "k8s/安装Docker.md"
+              }
+            }
+          }
+        ],
+        "currentTab": 3
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:打开快速切换": false,
+      "graph:查看关系图谱": false,
+      "canvas:新建白板": false,
+      "daily-notes:打开/创建今天的日记": false,
+      "templates:插入模板": false,
+      "command-palette:打开命令面板": false
+    }
+  },
+  "active": "7c3941a67b9913b7",
+  "lastOpenFiles": [
+    "软件破解/idea2023破解.md",
+    "k8s/安装Docker.md",
+    "k8s/k8s 的资源清单.md",
+    "k8s/k8s核心概念详解-上课画图.jpg",
+    "k8s/StorageClass 制备器.md",
+    "k8s/Redis Chart参数说明.md",
+    "k8s/kubectl资源类型与别名.md",
+    "软件破解/Navicat Premium 16破解.md",
+    "软件破解/window修改软件安装位置.md",
+    "软件破解/window激活.md",
+    "软件破解/office365破解.md",
+    "images/Pasted image 20230907004657.png",
+    "images/Pasted image 20230907000015.png",
+    "images/Pasted image 20230906235955.png",
+    "images/Pasted image 20230906235928.png",
+    "images/Pasted image 20230906235700.png",
+    "images/Pasted image 20230906235433.png",
+    "images/Pasted image 20230906235343.png",
+    "images/Pasted image 20230906235020.png",
+    "images/Pasted image 20230906235009.png",
+    "images",
+    "未命名.canvas",
+    "软件破解",
+    "2023-09-06.md"
+  ]
+}
