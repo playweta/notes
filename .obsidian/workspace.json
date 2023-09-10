@@ -4,16 +4,16 @@
     "type": "split",
     "children": [
       {
-        "id": "6c63eb293ef0a7dc",
+        "id": "f080154358b480e8",
         "type": "tabs",
         "children": [
           {
-            "id": "7c3941a67b9913b7",
+            "id": "0d4f670b31762c67",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "软件破解/idea2023破解.md",
+                "file": "docker/docker入门.md",
                 "mode": "source",
                 "source": false
               }
@@ -69,7 +69,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 300,
+    "collapsed": true
   },
   "right": {
     "id": "aa79eca75ccd3533",
@@ -85,7 +86,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "软件破解/idea2023破解.md",
+                "file": "docker/docker入门.md",
                 "collapseAll": true,
                 "extraContext": true,
                 "sortOrder": "alphabetical",
@@ -102,7 +103,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "软件破解/idea2023破解.md",
+                "file": "docker/docker入门.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -125,7 +126,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "软件破解/idea2023破解.md"
+                "file": "docker/docker入门.md"
               }
             }
           }
@@ -144,31 +145,39 @@
       "canvas:新建白板": false,
       "daily-notes:打开/创建今天的日记": false,
       "templates:插入模板": false,
-      "command-palette:打开命令面板": false
+      "command-palette:打开命令面板": false,
+      "audio-recorder:开始/结束录音": false
     }
   },
-  "active": "7c3941a67b9913b7",
+  "active": "0d4f670b31762c67",
   "lastOpenFiles": [
-    "软件破解/Navicat Premium 16破解.md",
-    "软件破解/office365破解.md",
-    "软件破解/window激活.md",
+    "images/Pasted image 20230910202901.png",
+    "images/Pasted image 20230910201015.png",
+    "images/Pasted image 20230910195750.png",
+    "images/Pasted image 20230910195621.png",
+    "images/Pasted image 20230910165040.png",
+    "images/Pasted image 20230910165027.png",
+    "images/Snipaste_2023-09-10_16-21-15.png",
+    "images/Pasted image 20230910155204.png",
+    "images/Snipaste_2023-09-10_14-37-54.png",
+    "images/Pasted image 20230910143726.png",
+    "images/Pasted image 20230910112116.png",
+    "linux/Ubuntu安装配置yum.md",
+    "docker/docker入门.md",
+    "linux",
+    "docker",
     "软件破解/window修改软件安装位置.md",
+    "软件破解/images/CygUtils.plugin",
+    "软件破解/images",
+    "软件破解/window激活.md",
+    "软件破解/Navicat Premium 16破解.md",
+    "软件破解/idea2023破解.md",
+    "软件破解/office365破解.md",
     "k8s/k8s 的资源清单.md",
     "k8s/安装Docker.md",
-    "软件破解/idea2023破解.md",
-    "k8s/k8s核心概念详解-上课画图.jpg",
     "k8s/StorageClass 制备器.md",
     "k8s/Redis Chart参数说明.md",
     "k8s/kubectl资源类型与别名.md",
-    "images/Pasted image 20230907004657.png",
-    "images/Pasted image 20230907000015.png",
-    "images/Pasted image 20230906235955.png",
-    "images/Pasted image 20230906235928.png",
-    "images/Pasted image 20230906235700.png",
-    "images/Pasted image 20230906235433.png",
-    "images/Pasted image 20230906235343.png",
-    "images/Pasted image 20230906235020.png",
-    "images/Pasted image 20230906235009.png",
     "images",
     "未命名.canvas",
     "软件破解",
