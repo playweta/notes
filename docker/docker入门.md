@@ -1,4 +1,3 @@
-
 ### 安装Docker
 ---
 #### Docker的基本组成
@@ -744,4 +743,1197 @@ rootfs(root file system)，在 bootfs之上。包含的就是典型 Linux 系统
 
 ![](../images/Pasted%20image%2020230910202901.png)
 
-在
+在添加额外的镜像层的同时，镜像始终保持是当前所有镜像的组合，理解这一点非常重要。下图中举了一个简单的例子，每个镜像层包含3个文件，而镜像包含了来自两个镜像层的6个文件。
+
+![](../images/Pasted%20image%2020230912115234.png)
+
+上图中的镜像层跟之前图中的略有区别，主要目的是便于展示文件。
+
+下图中展示了一个稍微复杂的三层镜像，在外部看来整个镜像只有6个文件，这是因为最上层中的文件7是文件5的一个最新版本。
+
+![](../images/Pasted%20image%2020230912115522.png)
+
+这种情况下，上层镜像层中的文件覆盖了底层镜像层中的文件。这样就使得文件的最新版本作为一个新的镜像层添加到镜像当中。
+
+Docker 通过存储引擎（新版本采用快照机制）的方式来实现镜像层堆栈，并保证多镜像层对外展示为统一的文件系统。
+
+Linux 上可用的存储引擎有 AUFS、Overlay2、Device Mapper、Btrfs 以及 ZFS。顾名思义，每种存储引擎都基于 Linux 中对应的文件系统或者块设备技术，并且每种存储引擎都有其独有的性能特点。
+
+Docker 在 Windows 上仅支持 windowsfilter 一种存储引擎，该引擎基于NTFS 文件系统之上实现了分层和CoW
+
+下图展示了与系统显示相同的三层镜像。所有镜像成堆叠并合并，对外提供统一的试图。
+
+  ![](../images/Pasted%20image%2020230913141855.png)
+
+>特点
+
+Docker 镜像都是只读的，当容器启动时，一个新的可写层被加载到镜像的顶部！
+这一层就是我们通常说的容器层，容器之下的都叫镜像层！
+
+##### 镜像Commit
+---
+**docker commit 从容器创建一个新的镜像。**
+
+```shell
+docker commit 提交容器副本使之成为一个新的镜像！
+
+# 语法
+docker commit -m="提交的描述信息" -a="作者" 容器id 要创建的目标镜像名:[标签名]
+```
+###### 测试
+```shell
+# 1、从Docker Hub 下载tomcat镜像到本地并运行 -it 交互终端 -p 端口映射
+docker run -it -p 8080:8080 tomcat
+
+# 注意：坑爹：docker启动官方tomcat镜像的容器，发现404是因为使用了加速器，而加速器里的tomcat的webapps下没有root等文件！
+# 下载tomcat官方镜像，就是这个镜像（阿里云里的tomcat的webapps下没有任何文件）
+# 进入tomcat查看webapps下发现全部是空的，反而有个webapps.dist里有对应文件，cp -r到webapps下！
+[root@VM-8-12-centos ~]# docker run -it -p 8080:8080 tomcat 
+
+# 2、删除上一步镜像产生的tomcat容器的文档
+docker ps    # 查看容器id
+docker exec -it 容器id /bin/bash
+打开一个新的窗口
+[root@VM-8-12-centos ~]# docker exec -it 661dc8ea90a8 /bin/bash
+root@661dc8ea90a8:/usr/local/tomcat# cp -r webapps.dist/* webapps
+root@661dc8ea90a8:/usr/local/tomcat# cd webapps
+root@661dc8ea90a8:/usr/local/tomcat/webapps# ls -l  # 查看是否存在 docs 文件
+root@661dc8ea90a8:/usr/local/tomcat/webapps# curl localhost:8080/docs/  # 返回docs的内容
+root@661dc8ea90a8:/usr/local/tomcat/webapps# rm -rf docs/   # 删除文件
+root@661dc8ea90a8:/usr/local/tomcat/webapps# curl localhost:8080/docs/  # 返回404
+
+# 3、当前运行的 tomcat 实例就是一个没有docs的容器，我们使用它为容器commit一个没有docs的tomcat新镜像，tomcat02
+
+docker ps -l  # 查看容器的id
+
+# 注意：commit的时候，容器的名字不能时大写，否则报错：invalid reference format
+[root@VM-8-12-centos ~]# docker commit -a="liubr" -m="no tomcat docs" 661dc8ea90a8 tomcat02:0.0.1
+
+sha256:835399cf2bcdefa9c6171c7c1bafb0e511e96f9f240585a6d64e9c388b88b644
+
+[root@VM-8-12-centos ~]# docker images # 查看，我们提交的镜像
+REPOSITORY            TAG       IMAGE ID       CREATED         SIZE
+tomcat02              0.0.1     835399cf2bcd   7 seconds ago   681MB
+hello-world           latest    9c7a54a9a43c   4 months ago    13.3kB
+nginx                 latest    605c77e624dd   20 months ago   141MB
+tomcat                9.0       b8e65a4d736d   20 months ago   680MB
+tomcat                latest    fb5657adc892   20 months ago   680MB
+# 4、这个时候我们可以使用，大家可以起到原来的tomcat，和我们新的tomcat02，来测试看看！
+[root@VM-8-12-centos ~]# docker run -it -p 8080:8080 tomcat02:0.0.1
+
+# 如果你想要保存你的当前状态，可以通过commit，来提交镜像，方便使用，类似于 VM 中的快照！
+```
+
+#### 容器数据卷
+##### 什么是容器数据卷
+**docker的理念回顾**
+将应用和运行的环境打包形成容器运行，运行可以伴随着容器，但是我们对于数据的要求，是希望能够持久化的！
+就好比，你安装一个MySQL，结果你把容器删了，就相当于删库跑路了，这TM也太扯了吧！
+所以我们希望容器之间有可能可以共享数据，Docker容器产生的数据，如果不通过docker commit生成新的镜像，使得数据作为镜像的一部风保存下来，那么当容器删除后，数据自然也就没有了！这样是行不通的！
+为了能保存数据在Docker中我们就可以使用卷！让数据挂载到我们本地！这样数据就不会因为容器删除而丢失了！
+###### 作用：
+卷就是目录或者文件，存在一个或者多个容器中，由docker挂载到容器，但不属于联合文件系统，因此能够绕过Union File System，提供一些用于持续存储或共享数据的特征：
+卷的设计目的就是数据的持久化，完全独立于容器的生存周期，因此Docker不会在容器删除时删除其挂载的数据卷。
+###### 特点：
+1、数据可在容器之间共享或重用数据
+2、卷中的更改可以直接生效
+3、数据卷中的更改不会包含在镜像的更新中
+4、数据卷的生命周期一直持续到没有容器使用它为止
+**所以：总结一句话：就是容器的持久化，以及荣期间的继承和数据共享！**
+
+##### 使用数据卷
+>方式一：容器中直接使用命令来添加
+
+挂载
+```shell
+# 命令
+docker run -it -v 宿主机绝对路径目录:容器内目录 镜像名
+
+# 测试
+[root@VM-8-12-centos ~]# docker run -it -v /home/ceshi:/home centos /bin/bash
+```
+查看数据卷是否挂载成功 `docker inspect 容器id`
+
+![](../images/Pasted%20image%2020230914141536.png)
+测试容器和宿主机之间数据共享：可以发现，在容器中，创建的会在宿主机中看到！
+![](../images/Pasted%20image%2020230914141713.png)
+![](../images/Pasted%20image%2020230914141738.png)
+测试容器停止退出后，主机修改数据是否会同步！
+1、停止容器
+2、在宿主机上修改文件，增加些内容
+3、启动刚才停止的容器
+4、然后查看对应的文件，发现数据依旧同步！ok
+![](../images/Pasted%20image%2020230914142213.png)
+![](../images/Pasted%20image%2020230914142414.png)
+![](../images/Pasted%20image%2020230914142435.png)
+
+>使用docker安装mysql
+
+思考：mysql数据持久化的问题！
+```
+# 1、搜索镜像
+[root@VM-8-12-centos ~]# docker search mysql
+NAME                            DESCRIPTION                                     STARS     OFFICIAL   AUTOMATED
+mysql                           MySQL is a widely used, open-source relation…   14446     [OK]       
+mariadb                         MariaDB Server is a high performing open sou…   5513      [OK] 
+
+# 2、拉取镜像
+[root@VM-8-12-centos ~]# docker pull mysql:5.7
+5.7: Pulling from library/mysql
+Digest: sha256:f2ad209efe9c67104167fc609cca6973c8422939491c9345270175a300419f94
+Status: Image is up to date for mysql:5.7
+docker.io/library/mysql:5.7
+
+# 3、启动容器 -e 环境变量！
+# 注意： mysql的数据应该不丢失! 先体验下！ 参考官方文档
+[root@VM-8-12-centos ~]# docker run -d -p 3310:3306 -v /home/mysql/conf:/etc/mysql/conf.d -v /home/mysql/data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 --name mysql01 mysql:5.7
+3f9e5a21745e840505875bf32cbace6f8297f37d37fb45026697c673c7ae0f9d
+
+# 4、使用本地的navicat连接测试一下 3310
+
+# 5、查看本地 /home/mysql 目录
+[root@VM-8-12-centos data]# pwd
+/home/mysql/data
+[root@VM-8-12-centos data]# ls # 可以看到我们刚刚创建的mysql数据库在本地存储着
+auto.cnf         client-key.pem  ib_logfile1         private_key.pem  sys
+ca-key.pem       ib_buffer_pool  ibtmp1              public_key.pem
+ca.pem           ibdata1         mysql               server-cert.pem
+client-cert.pem  ib_logfile0     performance_schema  server-key.pem
+
+# 6、删除mysql容器
+[root@VM-8-12-centos data]# docker rm -f mysql01  # 删除容器，然后发现远程连接失败！
+mysql01
+[root@VM-8-12-centos data]# ls  # 可以看到我们刚刚建立的mysql数据库在本地存储着
+auto.cnf         client-key.pem  ib_logfile1         private_key.pem  sys
+ca-key.pem       ib_buffer_pool  ibtmp1              public_key.pem
+ca.pem           ibdata1         mysql               server-cert.pem
+client-cert.pem  ib_logfile0     performance_schema  server-key.pem
+```
+
+>通过Docker File 来添加（了解）
+
+DockerFile 是用来创建Docker镜像的构造文件，是由一些列命令和参数构成脚本。
+我们在这里，先体验一下，后面我们会详细讲解DockerFile！
+
+测试：
+```shell
+# 1、我们在宿主机 /home 目录下新建一个 docker-test-volume文件夹
+[root@VM-8-12-centos home]# mkdir docker-test-volume
+
+# 说明：在编写DockerFile文件中使用 VOLUME 指令来给镜像添加一个或多个数据卷
+VOLUME["/dataVolumeContainer1","/dataVolumeContainer2","/dataVolumeContainer3"]
+# 出于可移植和分享的考虑，我们之前使用的 -v 主机目录:容器目录 这种方式不能够直接在DockerFile中实现。
+# 由于宿主机目录是依赖于特定宿主机的，并不能够保证在所有宿主机上都存在这样的特定目录。
+
+# 2、编写DockerFile文件
+[root@VM-8-12-centos docker-test-volume]# pwd
+/home/docker-test-volume
+[root@VM-8-12-centos docker-test-volume]# vim dockerfile1
+[root@VM-8-12-centos docker-test-volume]# cat dockerfile1 
+# volume test
+FROM centos
+VOLUME ["/dataVolumeContainer1","dataVolumeContainer2"]
+CMD echo "-----end-----"
+CMD /bin/bash
+
+# 3、build后生成镜像，获得一个新的镜像 coding/centos
+docker build -f /home/docker-test-volume/dockerfile1 -t coding/centos . # 注意最后有个.
+```
+![](../images/Pasted%20image%2020230914152354.png)
+```shell
+# 4、启动容器
+[root@VM-8-12-centos docker-test-volume]# docker run -it a4f04617f052 /bin/bash #启动容器
+[root@713dca146eb9 /]# ls -l
+total 56
+lrwxrwxrwx   1 root root    7 Nov  3  2020 bin -> usr/bin
+drwxr-xr-x   2 root root 4096 Sep 14 07:25 dataVolumeContainer1 # 数据卷目录
+drwxr-xr-x   2 root root 4096 Sep 14 07:25 dataVolumeContainer2 # 数据卷目录
+drwxr-xr-x   5 root root  360 Sep 14 07:25 dev
+drwxr-xr-x   1 root root 4096 Sep 14 07:25 etc
+drwxr-xr-x   2 root root 4096 Nov  3  2020 home
+
+# 问题：通过上述步骤：容器内的卷目录地址就已经知道了，但是对应的主机目录地址在哪里呢？
+
+# 5、我们在数据卷中新建一个文件
+[root@713dca146eb9 dataVolumeContainer1]# pwd
+/dataVolumeContainer1
+[root@713dca146eb9 dataVolumeContainer1]# touch container.txt
+[root@713dca146eb9 dataVolumeContainer1]# ls -l
+total 0
+-rw-r--r-- 1 root root 0 Sep 14 07:29 container.txt
+
+# 6、查看下这个容器的信息
+[root@VM-8-12-centos ~]# docker inspect 713dca146eb9
+# 查看输出的Volumes
+"Volumes": {
+	"/dataVolumeContainer1": {},
+	"dataVolumeContainer2": {}
+},
+
+# 7、这个卷在主机对应的默认位置
+```
+![](../images/Pasted%20image%2020230914153912.png)
+
+![](../images/Pasted%20image%2020230914153758.png)
+
+注意：如果访问出现了cannot open directory：Permission denied
+解决办法：在挂载目录后多加一个 --privileged=true参数即可
+
+#### 匿名和具名
+```shell
+-v 容器内路径
+docker run -d -p --name nginx01 -v /etc/nginx nginx
+
+# 匿名挂载的缺点，就是不好维护，通常使用命令 docker volume 维护
+docker volume ls
+
+# 具名挂载
+-v 卷名:/容器内路径
+docker run -d -p --name nginx02 -v nginxconfig:/etc/nginx nginx
+
+# 查看挂载的路径
+[root@VM-8-12-centos _data]# docker volume inspect nginxconfig
+[
+    {
+        "CreatedAt": "2023-09-14T15:53:43+08:00",
+        "Driver": "local",
+        "Labels": null,
+        "Mountpoint": "/var/lib/docker/volumes/nginxconfig/_data",
+        "Name": "nginxconfig",
+        "Options": null,
+        "Scope": "local"
+    }
+]
+
+# 怎么判断挂载的是卷名而不是本机目录名？
+不是/开始就是卷名，  是/开始就是目录名
+
+# 改变文件的读写权限
+# ro：readonly
+# rw：readwrite
+# 指定容器对我们挂载出来的内容的读写权限
+docker run -d -P name nginx02 -v nginxconfig:/etc/nginx:ro nginx
+docker run -d -P name nginx02 -v nginxconfig:/etc/nginx:rw nginx
+```
+
+#### 数据卷容器
+命名的容器挂载数据卷，其他容器通过挂载这个（父容器）实现数据共享，挂载数据卷的容器，称之为数据卷容器。
+我们使用上一步的镜像：kuangshen/centos为模板，运行容器docker01，docker02，docker03，他们都会具有容器卷
+```shell
+"/dataVolumeContainer1"
+"/dataVolumeContainer2"
+```
+###### 我们来测试下，容器之间传递共享
+1、先启动一个父容器docker01，然后在dataVolumeContainer2新增文件
+![](../images/Pasted%20image%2020230914160524.png)
+![](../images/Pasted%20image%2020230914160648.png)
+退出不停止`ctrl + P + Q`
+2、创建docker02，docker03让他们继承docker01  `--volumes-from`
+
+```shell
+[root@VM-8-12-centos docker-test-volume]# docker run -it --name docker02 --volumes-from docker01 coding/centos
+[root@4ed2289ea5bc /]# cd /dataVolumeContainer2
+[root@4ed2289ea5bc dataVolumeContainer2]# ls
+docker01.txt
+[root@4ed2289ea5bc dataVolumeContainer2]# touch docker02.txt
+[root@4ed2289ea5bc dataVolumeContainer2]# ls
+docker01.txt  docker02.txt
+
+[root@VM-8-12-centos docker-test-volume]# docker run -it --name docker03 --volumes-from docker01 coding/centos
+[root@db67535f71d1 /]# cd dataVolumeContainer2
+[root@db67535f71d1 dataVolumeContainer2]# ls
+docker01.txt  docker02.txt
+[root@db67535f71d1 dataVolumeContainer2]# touch docker03.txt
+[root@db67535f71d1 dataVolumeContainer2]# ls
+docker01.txt  docker02.txt  docker03.txt
+```
+3、回到docker01发现可以看到02和03添加的共享文件
+```shell
+[root@VM-8-12-centos docker-test-volume]# docker attach docker01
+[root@6c325aace53c dataVolumeContainer2]# ls -l
+total 0
+-rw-r--r-- 1 root root 0 Sep 14 08:06 docker01.txt
+-rw-r--r-- 1 root root 0 Sep 14 08:12 docker02.txt
+-rw-r--r-- 1 root root 0 Sep 14 08:16 docker03.txt
+```
+4、删除docker01，docker02 修改docker03还能不能访问
+```shell
+[root@VM-8-12-centos docker-test-volume]# docker rm -f docker01
+docker01
+[root@VM-8-12-centos docker-test-volume]# docker attach docker02
+[root@4ed2289ea5bc dataVolumeContainer2]# ls -l 
+total 0
+-rw-r--r-- 1 root root 0 Sep 14 08:06 docker01.txt
+-rw-r--r-- 1 root root 0 Sep 14 08:12 docker02.txt
+-rw-r--r-- 1 root root 0 Sep 14 08:16 docker03.txt
+[root@4ed2289ea5bc dataVolumeContainer2]# touch docker02-update.txt
+[root@4ed2289ea5bc dataVolumeContainer2]# ls -a
+.  ..  docker01.txt  docker02-update.txt  docker02.txt	docker03.txt
+Ctrl+P+Q 退出容器
+[root@VM-8-12-centos docker-test-volume]# docker attach docker03
+[root@db67535f71d1 dataVolumeContainer2]# ls -l      
+total 0
+-rw-r--r-- 1 root root 0 Sep 14 08:06 docker01.txt
+-rw-r--r-- 1 root root 0 Sep 14 08:20 docker02-update.txt
+-rw-r--r-- 1 root root 0 Sep 14 08:12 docker02.txt
+-rw-r--r-- 1 root root 0 Sep 14 08:16 docker03.txt
+```
+5、删除docker02，docker03还能不能访问
+```shell
+[root@VM-8-12-centos docker-test-volume]# docker ps
+CONTAINER ID   IMAGE           COMMAND                  CREATED          STATUS          PORTS                                     NAMES
+db67535f71d1   coding/centos   "/bin/sh -c /bin/bash"   7 minutes ago    Up 7 minutes                                              docker03
+4ed2289ea5bc   coding/centos   "/bin/sh -c /bin/bash"   10 minutes ago   Up 10 minutes                                             docker02
+[root@VM-8-12-centos docker-test-volume]# docker rm -f docker02
+docker02
+[root@VM-8-12-centos docker-test-volume]# docker attach docker03
+[root@db67535f71d1 dataVolumeContainer2]# ls -l
+total 0
+-rw-r--r-- 1 root root 0 Sep 14 08:06 docker01.txt
+-rw-r--r-- 1 root root 0 Sep 14 08:20 docker02-update.txt
+-rw-r--r-- 1 root root 0 Sep 14 08:12 docker02.txt
+-rw-r--r-- 1 root root 0 Sep 14 08:16 docker03.tx
+[root@db67535f71d1 dataVolumeContainer2]# touch docker03-update.txt
+```
+6、新建docker04继承docker03，然后删除docker03，看下是否可以访问！
+```shell
+[root@VM-8-12-centos docker-test-volume]# docker run -it --name docker04 --volumes-from docker03 coding/centos
+[root@fc15fb8e6da8 /]# ls -l
+total 56
+lrwxrwxrwx   1 root root    7 Nov  3  2020 bin -> usr/bin
+drwxr-xr-x   2 root root 4096 Sep 14 08:04 dataVolumeContainer1
+drwxr-xr-x   2 root root 4096 Sep 14 08:25 dataVolumeContainer2
+...
+[root@fc15fb8e6da8 /]# cd dataVolumeContainer2
+[root@fc15fb8e6da8 dataVolumeContainer2]# ls -l
+total 0
+-rw-r--r-- 1 root root 0 Sep 14 08:06 docker01.txt
+-rw-r--r-- 1 root root 0 Sep 14 08:20 docker02-update.txt
+-rw-r--r-- 1 root root 0 Sep 14 08:12 docker02.txt
+-rw-r--r-- 1 root root 0 Sep 14 08:25 docker03-update.txt
+-rw-r--r-- 1 root root 0 Sep 14 08:16 docker03.txt
+
+# 查看当前运行的容器
+[root@VM-8-12-centos docker-test-volume]# docker ps
+CONTAINER ID   IMAGE           COMMAND                  CREATED              STATUS              PORTS                                     NAMES
+fc15fb8e6da8   coding/centos   "/bin/sh -c /bin/bash"   About a minute ago   Up About a minute                                             docker04
+db67535f71d1   coding/centos   "/bin/sh -c /bin/bash"   13 minutes ago       Up 13 minutes                                                 docker03
+
+# 继续删除docker03
+[root@VM-8-12-centos docker-test-volume]# docker rm -f docker03
+docker03
+[root@VM-8-12-centos docker-test-volume]# docker attach docker04
+[root@fc15fb8e6da8 dataVolumeContainer2]# ls -l
+total 0
+-rw-r--r-- 1 root root 0 Sep 14 08:06 docker01.txt
+-rw-r--r-- 1 root root 0 Sep 14 08:20 docker02-update.txt
+-rw-r--r-- 1 root root 0 Sep 14 08:12 docker02.txt
+-rw-r--r-- 1 root root 0 Sep 14 08:25 docker03-update.txt
+-rw-r--r-- 1 root root 0 Sep 14 08:16 docker03.txt
+```
+
+**得出结论： 
+容器之间配置信息的传递，数据卷的生命周期一直持续到没有容器使用它为止。存储在本机的文件则会一直保留！**
+
+##### DockerFile
+---
+大家想想，Nginx，tomcat，mysql这些镜像都是哪里来的？官方能写，我们不能写吗？
+我们要研究自己如何做一个镜像，而且我们写的微服务项目以及springboot打包上云部署，Docker就是最方便的。
+微服务打包成镜像，任何装了Docker的地方，都可以下载使用，极其的方便。
+流程：开发应用=》DockerFile=》打包为镜像=》上传到仓库（私有仓库，公开仓库）=》下载镜像=》启动运行。
+可以方便移植！
+#### 什么是DockerFile
+---
+dockerfile用来构造Docker镜像的构造文件，是由于一些列命令和参数构成的脚本。
+构建步骤：
+1、编写DockerFile文件
+2、docker build 构造镜像
+3、docker run
+dockerfile文件我们刚才已经编写过了一次，这里我们继续使用centos来看！
+地址：https;//hub.docker.com/ /centos
+![](../images/Pasted%20image%2020230917191103.png)
+![](../images/Pasted%20image%2020230917191119.png)
+
+##### DockerFile构建过程
+---
+##### 基础知识：
+1、每条保留字指令都必须为大写字母且后面要跟随至少一个参数
+2、指令按照从上到下，顺序执行
+3、# 表示注释
+4、每条指令都会创建一个新的镜像层，并对镜像进行提交
+##### 流程：
+1、docker从基础镜像运行一个容器
+2、执行一条指令并对容器做出修改
+3、执行类似docker commit的操作提交一个新的镜像层
+4、Docker再基于刚提交的镜像运行一个新容器
+5、执行dockerfile中的下一条指令直到所有指令都执行完成！
+###### 说明：
+从应用软件的角度来看，DockerFile，docker镜像与docker容器分为代表软件的三个不同阶段。
+* DockerFile 是软件的原材料   （代码）
+* Docker 镜像则是软件的交付品   （.apk）
+* Docker 容器则是软件的运行状态   （客户下载安装执行）
+DockerFile面向开发，Docker镜像成为交付标准，Docker容器则涉及部署与运维，三者缺一不可！
+
+![](../images/Pasted%20image%2020230917192541.png)
+
+DockerFile：需要定义一个DockerFile，DockerFile定义了进程需要的一切东西。DockerFile涉及的内容包括执行代码或者是文件、环境变量、依赖包、运行时环境、动态链接库、操作系统的发行版、服务进程和内核进程（当引用进行需要和系统服务和内核进程打交道，这时需要考虑如何设计namespace的权限控制）等等。
+Docker镜像：在DockerFile定义了一个文件之后，Docker build 时会产生一个Docker镜像，当运行Docker镜像时，会真正开始提供服务；
+Docker容器：容器是直接提供服务的。
+
+##### DockerFile指令
+---
+###### 关键字：
+```shell
+FROM                      # 基础镜像，当前新的镜像是基于那个镜像的
+MAINTAINER                # 镜像维护者的姓名混合邮箱地址
+RUN                       # 容器构造是需要运行的命令
+EXPOSE                    # 当前容器对外保留出的端口
+WORKDIR                   # 指定在创建容器后，终端默认登陆的进来工作目录，一个落脚点
+ENV                       # 用来构建镜像过程中设置环境变量
+ADD                       # 将宿主机目录下的文件拷贝进镜像且ADD命令会自动处理URL和解压tar压缩包
+COPY                      # 类似ADD，拷贝文件和目录到镜像中！
+VOLUME                    # 容器数据卷，用于数据保存和持久化工作
+CMD                       # 指定一个容器启动时要运行的命令，dockerFile中可以有多个CMD指令，但只有最后一个生效！
+ENTRYPOINT                # 指定一个容器启动要运行的命令！和CMD一样
+ONBUILD                   # 当构建一个被继承的DockerFile是运行命令，父镜像在被子镜像继承后，父镜像的ONBUILD被触发
+```
+![](../images/Pasted%20image%2020230917195004.png)
+![](../images/Pasted%20image%2020230917195030.png)
+##### 实战测试
+Docker Hub 中99% 的镜像都是通过在base镜像（Scratch）中安装和配置需要的软件构建出来的
+![](../images/Pasted%20image%2020230917195228.png)
+
+>自定义一个centos
+
+###### 1、编写DockerFile
+查看下官方默认的Centos的情况：
+![](../images/Pasted%20image%2020230917195759.png)
+目的：使得我们自己的镜像具备如下：登录后的默认路径、vim编辑器、查看网络配置ifconfig支持
+准备编写DockerFile文件
+```shell
+[root@VM-8-12-centos home]# mkdir dockerfile-test
+[root@VM-8-12-centos home]# ls
+ceshi  dockerfile-test  docker-test-volume  f1  lighthouse  mysql
+[root@VM-8-12-centos home]# vim mydockerfile-centos
+[root@VM-8-12-centos home]# cat mydockerfile-centos 
+FROW centos
+MAINTAINER coding<1502473931@qq.com>
+
+ENV MYPATH /usr/local
+WORKDIR $MYPATH
+
+RUN yum -y install vim
+RUN yum -y install net-tools
+
+EXPOSE 80
+
+CMD echo $MYPATH
+CMD echo "----------end-------------"
+CMD /bin/bash
+```
+
+###### 2、构建
+`docker build -f dockerfile地址 -t 新镜像名字:TAG .`
+会看到 docker build 命令最后有一个.             .表示当前目录****
+```shell
+[root@VM-8-12-centos home]# docker build -f mydockerfile-centos -t mycentos:0.0.1 .
+[+] Building 44.6s (8/8) FINISHED                                             docker:default
+ => [internal] load build definition from mydockerfile-centos                           0.0s
+ => => transferring dockerfile: 273B                                                    0.0s
+ => [internal] load .dockerignore                                                       0.0s
+ => => transferring context: 2B                                                         0.0s
+ => [internal] load metadata for docker.io/library/centos:7                             1.3s
+ => [1/4] FROM docker.io/library/centos:7@sha256:9d4bcbbb213dfd745b58be38b13b996ebb5a  11.4s
+ => => resolve docker.io/library/centos:7@sha256:9d4bcbbb213dfd745b58be38b13b996ebb5ac  0.0s
+ => => sha256:eeb6ee3f44bd0b5103bb561b4c16bcb82328cfe5809ab675bb17ab3a 2.75kB / 2.75kB  0.0s
+ => => sha256:2d473b07cdd5f0912cd6f1a703352c82b512407db6b05b43f25537 76.10MB / 76.10MB  6.1s
+ => => sha256:9d4bcbbb213dfd745b58be38b13b996ebb5ac315fe75711bd618426a 1.20kB / 1.20kB  0.0s
+ => => sha256:dead07b4d8ed7e29e98de0f4504d87e8880d4347859d839686a31da35a3b 529B / 529B  0.0s
+ => => extracting sha256:2d473b07cdd5f0912cd6f1a703352c82b512407db6b05b43f2553732b55df  5.0s
+ => [2/4] WORKDIR /usr/local                                                            0.2s
+ => [3/4] RUN yum -y install vim                                                       25.1s
+ => [4/4] RUN yum -y install net-tools                                                  4.2s
+ => exporting to image                                                                  2.2s 
+ => => exporting layers                                                                 2.2s 
+ => => writing image sha256:5524f4a12ebf5bf3c0b97a04adc0f12a42d98b574c3686872eb33e8248  0.0s 
+ => => naming to docker.io/library/mycentos:0.0.1                                       0.0s
+```
+![](../images/Pasted%20image%2020230917202813.png)
+可以看到，我们自己的新镜像已经支持vim/ifconfig的命令，扩展OK！
+4、列出镜像地的变更历史
+`docker history 镜像名`
+
+![](../images/Pasted%20image%2020230917210038.png)
+
+>CMD和ENTRPOINT的区别
+
+我们之前说过，两个命令都是指定一个容器启动时要运行的命令
+**CMD**：DockerFile中可以有多个CMD指令，但是只有最后一个生效，CMD会被docker run之后的参数替换！
+**ENTRYPOINT**：docker run 之后的参数会被当做参数传递给ENTRYPOINT，之后形成新的命令组合！
+**测试**:
+CMD命令
+```shell
+# 1、构建dockerfile
+[root@VM-8-12-centos home]# vim dockerfile-cmd-test
+[root@VM-8-12-centos home]# cat dockerfile-cmd-test 
+FROM centos
+CMD ["ls", "-a"]
+
+# 2、build 镜像
+[root@VM-8-12-centos home]# docker build -f dockerfile-cmd-test -t cmdtest .
+[+] Building 0.1s (5/5) FINISHED                                              docker:default
+ => [internal] load build definition from dockerfile-cmd-test                           0.0s
+ => => transferring dockerfile: 76B                                                     0.0s
+ => [internal] load .dockerignore                                                       0.0s
+ => => transferring context: 2B                                                         0.0s
+ => [internal] load metadata for docker.io/library/centos:latest                        0.0s
+ => CACHED [1/1] FROM docker.io/library/centos                                          0.0s
+ => exporting to image                                                                  0.0s
+ => => exporting layers                                                                 0.0s
+ => => writing image sha256:7d202bdf002be182b794b7f2b4c90c4fe3560c3ac4f8cebc27f1c8a94a  0.0s
+ => => naming to docker.io/library/cmdtest                                              0.0s
+# 3、执行
+[root@VM-8-12-centos home]# docker run 7d202bdf002b
+.
+..
+.dockerenv
+bin
+dev
+etc
+home
+lib
+...
+
+# 4、如果我们希望用 -l 参数
+[root@VM-8-12-centos home]# docker run cmdtest -l
+docker: Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: exec: "-l": executable file not found in $PATH: unknown.
+
+# 问提：我们可以看到可执行文件找不到的报错，executable file not found.
+# 之前我们说过，跟在镜像名后面的是 command，运行时会替换 CMD 的默认值。
+# 因此这里的 -l 替换了原来的 CMD，而不是添加在原来的ls -a 后面。而 -l 根本不是命令，所以自然找不到。
+# 那么如果我们希望加入 -l 这参数，我们就必须重新完整的输入这个命令：
+
+docker run cmdtest ls -al
+```
+ENTRYPOINT命令
+```
+[root@VM-8-12-centos home]# vim dockerfile-entrypoint-test
+[root@VM-8-12-centos home]# cat dockerfile-entrypoint-test 
+FROM centos
+ENTRYPOINT ["ls","-a"]
+
+[root@VM-8-12-centos home]# docker build -f dockerfile-entrypoint-test -t entrypointtest .
+[+] Building 0.1s (5/5) FINISHED                                              docker:default
+ => [internal] load build definition from dockerfile-entrypoint-test                    0.0s
+ => => transferring dockerfile: 90B                                                     0.0s
+ => [internal] load .dockerignore                                                       0.0s
+ => => transferring context: 2B                                                         0.0s
+ => [internal] load metadata for docker.io/library/centos:latest                        0.0s
+ => CACHED [1/1] FROM docker.io/library/centos                                          0.0s
+ => exporting to image                                                                  0.0s
+ => => exporting layers                                                                 0.0s
+ => => writing image sha256:b325f5b972337e763ad3b2c0f1a720eb2d5b11a39b3d88008cc5a0e423  0.0s
+ => => naming to docker.io/library/entrypointtest                                       0.0s
+[root@VM-8-12-centos home]# docker run b325f5b972337e763
+.
+..
+.dockerenv
+bin
+dev
+etc
+home
+lib
+lib64
+...
+[root@VM-8-12-centos home]# docker run entrypointtest -l
+total 56
+drwxr-xr-x   1 root root 4096 Sep 20 03:40 .
+drwxr-xr-x   1 root root 4096 Sep 20 03:40 ..
+-rwxr-xr-x   1 root root    0 Sep 20 03:40 .dockerenv
+lrwxrwxrwx   1 root root    7 Nov  3  2020 bin -> usr/bin
+drwxr-xr-x   5 root root  340 Sep 20 03:40 dev
+drwxr-xr-x   1 root root 4096 Sep 20 03:40 etc
+drwxr-xr-x   2 root root 4096 Nov  3  2020 home
+...
+```
+>自定义镜像tomcat
+
+1、`mkdir -p coding/build/tomcat`
+2、在上述目录下 touch read.txt
+3、将JDK 和 tomcat 安装的压缩包拷贝进上一步目录
+4、在 /coding/build/tomcat 目录下新建一个Dockerfile文件
+
+```shell
+# vim Dockerfile
+
+FROM centos:7
+MAINTAINER coding<1502473931@qq.com>
+#把宿主机当前上下文的read.txt拷贝到容器/usr/local/路径下
+COPY read.txt /usr/local/cincontainer.txt
+# 把java与tomcat添加到容器中
+ADD jdk-8u11-linux-x64.tar.gz /usr/local/
+ADD apache-tomcat-9.0.22.tar.gz /usr/local/
+# 安装 vim 编辑器
+RUN yum -y install vim
+# 设置工作访问时候的WORKDIR路径，登录落脚点
+ENV MYPATH /usr/local
+WORKDIR $MYPATH
+# 配置java与tomcat环境变量
+ENV JAVA_HOME /usr/local/jdk1.8.0_11
+ENV CLASSPATH $JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+ENV CATALINA_HOME /usr/local/apache-tomcat-9.0.22
+ENV CATALINA_BASE /usr/local/apache-tomcat-9.0.22
+ENV PATH $PATH:$JAVA_HOME/bin:$CATALINA_HOME/lib:$CATALINA_HOME/bin
+# 容器运行时监听的端口
+EXPOSE 8080
+# 启动时运行tomcat
+# ENTRYPOINT ["/usr/local/apache-tomcat-9.0.22/bin/startup.sh"]
+# CMD ["/usr/local/apache-tomcat-9.0.22/bin/catalina.sh","run"]
+CMD /usr/local/apache-tomcat-9.0.22/bin/startup.sh && tail -F /usr/local/apache-tomcat-9.0.22/bin/logs/catalina.out
+```
+
+当前文件状态
+![](../images/Pasted%20image%2020230920143814.png)
+5、构建镜像
+
+```shell
+[root@VM-8-12-centos tomcat]# docker build -t diytomcat .
+...
+ => => writing image sha256:689775732ebe2b7f1bc5b073830bc48808d78059989fc98b81e08ae20b  0.0s 
+ => => naming to docker.io/library/diytomcat                                            0.0s                 # 构建完成
+
+# 查看确定构建完毕
+[root@VM-8-12-centos tomcat]# docker images
+REPOSITORY            TAG       IMAGE ID       CREATED         SIZE
+diytomcat             latest    689775732ebe   6 minutes ago   818MB
+```
+6、运行启动run
+```shell
+docker run -d -p 9090:8080 --name mydiytomcat -v /home/coding/build/tomcat/test/:/usr/local/apache-tomcat-9.0.22/webapps/test -v /home/coding/build/tomcat/tomcat9logs/:/usr/local/apache-tomcat-9.0.22/logs --privileged=true diytomcat
+```
+![](../images/Pasted%20image%2020230920145930.png)
+备注：Docker挂载主机目录Docker访问出现cannot open directory.:Permission denied
+解决办法：在挂载目录后多加一个--privileged=true参数即可
+7、验证测试访问！`curl localhost:9090`
+![](../images/Pasted%20image%2020230920150359.png)
+8、结合前面学习的容器卷将测试的web服务test发布
+
+![](../images/Pasted%20image%2020230920155900.png)
+web.xml
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://java.sun.com/xml/ns/javaee" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
+http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" id="WebApp_ID" version="2.5">
+	<display-name>test</display-name>
+</web-app>
+```
+a.jsp
+```jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>hello，kuangshen</title> 
+  </head>
+  <body>
+    -----------welcome------------
+    <%=" my docker tomcat，kuangshen666 "%>
+    <br>
+    <br>
+    <% System.out.println("-------my docker tomcat-------");%>
+  </body> 
+</html>
+```
+9、测试
+![](../images/Pasted%20image%2020230920160205.png)
+```shell
+[root@VM-8-12-centos tomcat]# cd tomcat9logs/
+[root@VM-8-12-centos tomcat9logs]# ll
+total 192
+-rw-r----- 1 root root 93591 Sep 20 15:56 catalina.2023-09-20.log
+-rw-r----- 1 root root 93684 Sep 20 16:01 catalina.out
+-rw-r----- 1 root root     0 Sep 20 14:58 host-manager.2023-09-20.log
+-rw-r----- 1 root root  2040 Sep 20 15:51 localhost.2023-09-20.log
+-rw-r----- 1 root root  2652 Sep 20 16:01 localhost_access_log.2023-09-20.txt
+-rw-r----- 1 root root     0 Sep 20 14:58 manager.2023-09-20.log
+[root@VM-8-12-centos tomcat9logs]# cat catalina.out 
+...
+-------my docker tomcat------- #搞定
+```
+##### 发布镜像
+>DockerHub
+
+注册dockerhub https://hub.docker.com/ ,需要有一个账号
+```shell
+# 1、查看命令
+[root@VM-8-12-centos tomcat9logs]# docker login --help
+Usage:  docker login [OPTIONS] [SERVER]
+# 2、登录
+[root@VM-8-12-centos tomcat9logs]# docker login -u usering
+Password: 
+WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/engine/reference/commandline/login/#credentials-store
+
+Login Succeeded
+# 3、将镜像发布出去
+[root@VM-8-12-centos tomcat]# docker tag 50f1298f858f usering/diytomcat:1.0
+[root@VM-8-12-centos tomcat]# docker push usering/diytomcat:1.0
+The push refers to repository [docker.io/usering/diytomcat]
+5f70bf18a086: Preparing 
+6252e33a5e2f: Preparing 
+ec113ebdd4e5: Preparing 
+c8714fe46b9f: Preparing 
+b691711ca4d8: Preparing 
+174f56854903: Waiting 
+denied: requested access to the resource is denied
+在官网创建项目
+```
+![](../images/Pasted%20image%2020230920162032.png)
+再次 push ok
+![](../images/Pasted%20image%2020230920162154.png)
+
+>阿里云镜像服务
+
+1、登录阿里云
+2、找到容器镜像服务
+![](../images/Pasted%20image%2020230920162730.png)
+![](../images/Pasted%20image%2020230920162758.png)
+![](../images/Pasted%20image%2020230920163010.png)
+
+4、创建镜像仓库
+![](../images/Pasted%20image%2020230920163319.png)
+
+5、点击今日这个镜像仓库，可以看到所有的信息
+![](../images/Pasted%20image%2020230920163219.png)
+
+6、测试推进发布
+```shell
+# 1、登录阿里云
+[root@VM-8-12-centos tomcat]# docker login --username=15970645022 registry.cn-hangzhou.aliyuncs.com
+Password: 
+WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/engine/reference/commandline/login/#credentials-store
+
+Login Succeeded
+# 2、设置 tag
+docker tag [ImageId] registry.cn-hangzhou.aliyuncs.com/usering/coding:[镜像版本号]
+
+# 3、推送命令
+docker push registry.cn-hangzhou.aliyuncs.com/usering/coding:[镜像版本号]
+docker push registry.cn-hangzhou.aliyuncs.com/usering/coding:1.0
+```
+7、在阿里云镜像仓库查看效果！
+![](../images/Pasted%20image%2020230920231421.png)
+##### 总结
+![](../images/Pasted%20image%2020230920171601.png)
+
+#### Docker 网络讲解
+##### 理解Docker0
+---
+准备工作：清理所有的容器，清理所有的镜像
+```
+docker rm -f $(docker ps -a -q)            # 删除所有容器
+docker rmi -f $(docker images -qa)         # 删除全部镜像
+```
+Docker的网络也是十分重要的一个点，希望大家可以认真理解！
+
+>我们先来做个测试
+
+查看本地ip`ip addr`
+![](../images/Pasted%20image%2020230921141215.png)
+这里我们分析可得，有三个网络：
+```shell
+lo          127.0.0.1      # 本机回环地址
+eth0        10.0.8.12      # 阿里云的私有ip
+docker0     172.17.0.1     # docker网桥
+# 问题：Docker 是如何处理容器网络访问的？
+```
+我们之前安装ES的时候，流过一个问题，就是安装Kibana的问题，Kibana得指定ES的地址！或者我们实际场景中，我们开发了很多微服务项目，那些微服务项目都要连接数据库，需要指定数据库的url地址，通过ip。但是我们用Docker管理的话，假设数据库出了问题，我们重新启动运行一个，这个时候数据库地址就会发生变化，docker会给每个容器都分配一个ip，且容器和容器之间可以互相访问的。我们可以测试下容器之间能不能ping通过：
+```shell
+# 启动tomcat01
+[root@VM-8-12-centos ~]# docker run -d -P --name tomcat01 tomcat
+
+# 查看tomcat01的IP地址，docker会给每个容器分配一个ip！
+[root@VM-8-12-centos ~]# docker exec -it tomcat01 ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+146: eth0@if147: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 02:42:ac:11:00:03 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 172.17.0.3/16 brd 172.17.255.255 scope global eth0
+       valid_lft forever preferred_lft forever
+
+# 思考，我们的linux服务器是否可以ping同容器内的tomcat？
+[root@VM-8-12-centos ~]# ping 172.17.0.3
+PING 172.17.0.3 (172.17.0.3) 56(84) bytes of data.
+64 bytes from 172.17.0.3: icmp_seq=1 ttl=64 time=0.174 ms
+64 bytes from 172.17.0.3: icmp_seq=2 ttl=64 time=0.056 ms
+64 bytes from 172.17.0.3: icmp_seq=3 ttl=64 time=0.055 ms  # 可以ping通
+```
+>原理
+
+1、每个安装了Docker的linux主机都有一个docker0的虚拟网卡。这是个桥接网卡，使用veth-pair技术！
+```shell
+[root@VM-8-12-centos ~]# ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 52:54:00:4f:c0:73 brd ff:ff:ff:ff:ff:ff
+    inet 10.0.8.12/22 brd 10.0.11.255 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::5054:ff:fe4f:c073/64 scope link 
+       valid_lft forever preferred_lft forever
+3: docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 02:42:7f:c2:70:e9 brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::42:7fff:fec2:70e9/64 scope link 
+       valid_lft forever preferred_lft forever
+143: veth99c9fa6@if142: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP group default 
+    link/ether 82:a4:aa:f1:19:c4 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet6 fe80::80a4:aaff:fef1:19c4/64 scope link 
+       valid_lft forever preferred_lft forever
+147: vethbcbf51c@if146: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP group default 
+    link/ether 06:76:c3:c6:0c:a6 brd ff:ff:ff:ff:ff:ff link-netnsid 1
+    inet6 fe80::476:c3ff:fec6:ca6/64 scope link 
+       valid_lft forever preferred_lft forever
+
+# 发现：本来我们有三个网络，我们在启动了个tomcat容器之后，多了一个！123的网络！
+```
+2、每启动一个容器，linux主机就会多了一个虚拟网卡。
+```shell
+# 我们启动了一个tomcat01, 主机的ip地址多了一个  147: vethbcbf51c@if146
+# 然后我们在tomcat01容器中查看容器的ip是        146: eth0@if147
+
+# 我们再启动一个tomcat02观察
+[root@VM-8-12-centos ~]# docker run -d -P --name tomcat02 tomcat
+
+# 然后发现linux主机上又多了一个网卡     149: vethb96e086@if148
+# 我们看下tomcat02的容器内ip地址是      148: eth0@if149
+[root@VM-8-12-centos ~]# docker exec -it tomcat02 ip adde
+
+# 观察现象：
+# tomcat  ---  linux主机    147: vethbcbf51c@if146   ---    146: eth0@if147
+# tomcat  ---  linux主机    149: vethb96e086@if148   ---   148: eth0@if149
+# 相信到了这里，大家应该能看出点小猫腻了吧！只要启动一个容器，就有一对网卡
+
+# veth-pair  就是一对的虚拟设备接口，她都是成对出现的。一端连着协议栈，一端彼此相连着。
+# 正因为有这个特征，它常常充当着一个桥梁，连接着各种虚拟网络设备！
+# “Bridge、OVS 之间的连接”,"Docker 容器之间的连接"等等，以此构建出非常复杂的虚拟网络结构，比如 OpenStack Neutron
+```
+
+3、我们来测试下tomcat01和tomcat02容器间是否可以相互ping通
+
+```shell
+[root@VM-8-12-centos ~]# docker exec -it tomcat01 ping 172.17.0.4
+PING 172.17.0.4 (172.17.0.4) 56(84) bytes of data.
+64 bytes from 172.17.0.4: icmp_seq=1 ttl=64 time=0.095 ms
+64 bytes from 172.17.0.4: icmp_seq=2 ttl=64 time=0.105 ms
+
+# 结论：容器和容器之间是可以互相访问的。
+```
+4、我们来话一个网络模型图
+![](../images/Pasted%20image%2020230921155928.png)
+
+结论：tomcat01和tomcat02共用一个路由器。是的，他们使用的是一个，就是docker0，任何一个容器启动默认都是docker0网络。
+docker默认会给容器分配一个可用ip
+
+>小结
+
+Docker使用Linux桥接，在宿主机虚拟一个Docker容器网桥(docker0)，Docker启动一个容器时会根据Docker网桥的网段分配给容器一个IP地址，称为Container-IP，同时Docker网桥是每个容器的默认网关。因为在同一宿主机内的容器都接入同一个网桥，这样容器间就能通过容器的Container-IP直接通信。
+![](../images/Pasted%20image%2020230921160608.png)
+
+Docker容器网络就很好的利用了Linux虚拟网络技术，在本地主机和容器内分别创建一个虚拟接口，并让他们彼此通信（这样一对接口叫veth pair）；
+Docker 中的网络接口默认都是虚拟的接口，虚拟接口的优势就是转发效率极高（因为Linux是在内核中进行数据的复制来实现虚拟接口之间的数据转发，无需通过外部的网络设备交换），对于本地系统和容器系统来说，虚拟接口跟一个正常的以太网卡相比并没有区别，只是他的速度快很多。
+
+### --Link
+---
+思考一个场景，我们编写一个微服务，数据库链接地址原来使用ip的，如果ip变化就不行了，那我们能不能使用服务名访问呢？
+jdbc:mysql://mysql:3306，这样的话哪怕mysql重启，我们也不需要修改配置了！docker提供了--link的操作！
+```shell
+# 我们使用tomcat02,直接通过容器名pingtomcat01，不使用ip
+[root@VM-8-12-centos ~]# docker exec -it tomcat01 ping tomcat02
+ping: tomcat02: Name or service not known  # 发现ping不通
+
+# 我们再启动一个tomcat03，但是启动的时候连接tomcat02
+[root@VM-8-12-centos ~]# docker run -d -P --name tomcat03 --link tomcat01 tomcat
+6f827bc9c15e66c0ef814a43f9cf35fd17197f147bc87b0335b0ffa8c579bb05
+
+# 我们再启动一个tomcat03，但是启动的时候连接tomcat01
+[root@VM-8-12-centos ~]# docker exec -it tomcat03 ping tomcat01
+PING tomcat01 (172.17.0.3) 56(84) bytes of data.
+64 bytes from tomcat01 (172.17.0.3): icmp_seq=1 ttl=64 time=0.101 ms
+64 bytes from tomcat01 (172.17.0.3): icmp_seq=2 ttl=64 time=0.058 ms
+
+# 再来测试，tomcat03 是否可以ping tomcat02   失败
+[root@VM-8-12-centos ~]# docker exec -it tomcat03 ping tomcat02
+ping: tomcat02: Name or service not known
+
+# 再来测试，tomcat01 是否可以ping tomcat03    反向也ping不通
+[root@VM-8-12-centos ~]# docker exec -it tomcat01 ping 03
+ping: connect: Invalid argument
+```
+思考，这个原理是什么呢？我们进入tomcat03中查看下host配置文件
+```shell
+[root@VM-8-12-centos ~]# docker exec -it tomcat03 cat /etc/hosts
+127.0.0.1	localhost
+::1	localhost ip6-localhost ip6-loopback
+fe00::0	ip6-localnet
+ff00::0	ip6-mcastprefix
+ff02::1	ip6-allnodes
+ff02::2	ip6-allrouters
+172.17.0.3	tomcat01 ed5d74cb3926   # 发现tomcat2直接被写到这里
+172.17.0.5	6f827bc9c15e
+
+# 所以这里其实就是配置了一个hosts 地址而已！
+# 原因：--link的时候，直接把需要link的主机的域名和ip直接配置到了hosts文件中了。
+```
+--link早都过时了，我们不推荐使用！我们可以使用自定义网络的方式
+
+#### 自定义网络
+>基本命令查看
+
+命令如下：
+![](../images/Pasted%20image%2020230921200414.png)
+###### 查看所有网络
+```shell
+[root@VM-8-12-centos ~]# docker network ls
+NETWORK ID     NAME      DRIVER    SCOPE
+394e4dabee48   bridge    bridge    local
+1636292d806c   host      host      local
+a23a326f64ea   none      null      local
+```
+所有网路模式
+
+| 网络模式 | 配置 | 说明 |
+| --- | --- | ---|
+| bridge模式 | --net=bridge | 默认值，在Docker 网桥docker0上为容器创建新的网络栈 |
+| none模式 | --net=none | 不配做网络，用户可以稍后进入容器，自行配置 |
+| container模式 | --netcontainer:name/id | 容器和另外一个容器共享Network namespace。kubernetes中的pod就是多个容器共享一个Network namespace. |
+| host模式 | -net=host | 容器和宿主机共享Network namespace |
+| 用户自定义 | -net=自定义网络 | 用户自己使用network相关命令定义网络，创建容器的时候可以指定为自己定义网络 |
+
+###### 查看一个具体的网络的详细信息
+```json
+[root@VM-8-12-centos ~]# docker network inspect 394e4dabee48
+[
+    {
+        "Name": "bridge",
+        "Id": "394e4dabee48ed1f6fa8dc7fdfdec9e812ad1f6c9f32737754373ccb02cba36e",
+        "Created": "2023-09-09T13:40:59.997650328+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+	                // 默认docker0是管理这个子网范围内的。0~16，也就是255*255，去掉0个255，我们有65534可以分配的ip
+	                // docker0网络默认可以支持创建6万多个容器ip不重复
+                    "Subnet": "172.17.0.0/16",
+                    "Gateway": "172.17.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "6f827bc9c15e66c0ef814a43f9cf35fd17197f147bc87b0335b0ffa8c579bb05": {
+                "Name": "tomcat03",
+                "EndpointID": "977961ba97b39b946441751277a745560ee1958a786478275bd10e9c225081c3",
+                "MacAddress": "02:42:ac:11:00:05",
+                "IPv4Address": "172.17.0.5/16",
+                "IPv6Address": ""
+            },
+            "7cef37630c62752fd3dbde4e87b7cbbbb8c2b246d6d1a17ddc7ac8d923809d11": {
+                "Name": "tomcat02",
+                "EndpointID": "b72b80367eafcf0da5627ca905144e775e28908a7d21435fa6829f9098a35b77",
+                "MacAddress": "02:42:ac:11:00:04",
+                "IPv4Address": "172.17.0.4/16",
+                "IPv6Address": ""
+            },
+            "e466a06824cae973be708c5b0a29ce44e1404dc6550fd777d9d49c59a8138a97": {
+                "Name": "mydiytomcat",
+                "EndpointID": "4d81d01223abf58edf9ce674dd3de6b0d9cd76a2ce54df49b3a2aaa87f221201",
+                "MacAddress": "02:42:ac:11:00:02",
+                "IPv4Address": "172.17.0.2/16",
+                "IPv6Address": ""
+            },
+            "ed5d74cb3926af9c940b5dcb7f8bfbaca6a270e13091f158e2e8507897014003": {
+                "Name": "tomcat01",
+                "EndpointID": "d564765f5b874b3d5fc4ac1b0a58fadda6d5b52e127b45f922afc6fbd2dae235",
+                "MacAddress": "02:42:ac:11:00:03",
+                "IPv4Address": "172.17.0.3/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {
+            "com.docker.network.bridge.default_bridge": "true",
+            "com.docker.network.bridge.enable_icc": "true",
+            "com.docker.network.bridge.enable_ip_masquerade": "true",
+            "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+            "com.docker.network.bridge.name": "docker0",
+            "com.docker.network.driver.mtu": "1500"
+        },
+        "Labels": {}
+    }
+]
+```
+>自定义网卡
+
+1、删除原来的所有容器
+```shell
+[root@VM-8-12-centos ~]# docker rm -f $(docker ps -aq)
+6f827bc9c15e
+7cef37630c62
+ed5d74cb3926
+e466a06824ca
+
+# 恢复了最开始的样子
+[root@VM-8-12-centos ~]# ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 52:54:00:4f:c0:73 brd ff:ff:ff:ff:ff:ff
+    inet 10.0.8.12/22 brd 10.0.11.255 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::5054:ff:fe4f:c073/64 scope link 
+       valid_lft forever preferred_lft forever
+3: docker0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default 
+    link/ether 02:42:7f:c2:70:e9 brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::42:7fff:fec2:70e9/64 scope link 
+       valid_lft forever preferred_lft forever
+```
+2、接下来我们来创建容器，但是我们知道默认创建的容器都是docker0网卡的
+```shell
+docker run -d -P --name tomcat01 --net bridge tomcat
+
+# docker0网络的特点
+	1.她是默认的
+	2.域名访问不通
+	3.--link 域名通了，但是删除了又不行
+```
+3、我们可以让容器创建的时候使用自定义网络
+![](../images/Pasted%20image%2020230921203739.png)
+```shell
+# 自定义创建的默认default “bridge”
+# 自定义创建一个网络网络
+[root@VM-8-12-centos ~]# docker network create --driver bridge --subnet 192.168.0.0/16 --gateway 192.168.0.1 mynet
+0f1f3d67efa104777f3e51370178536c0d4fc7ec8894013e9b4cbf0679332f94
+# 确定是否创建
+[root@VM-8-12-centos ~]# docker network ls
+NETWORK ID     NAME      DRIVER    SCOPE
+394e4dabee48   bridge    bridge    local
+1636292d806c   host      host      local
+0f1f3d67efa1   mynet     bridge    local
+a23a326f64ea   none      null      local
+[root@VM-8-12-centos ~]# docker network inspect mynet
+[
+    {
+        "Name": "mynet",
+        "Id": "0f1f3d67efa104777f3e51370178536c0d4fc7ec8894013e9b4cbf0679332f94",
+        "Created": "2023-09-21T20:40:44.565062552+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "192.168.0.0/16",
+                    "Gateway": "192.168.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {},
+        "Options": {},
+        "Labels": {}
+    }
+]
+
+# 我们来启动两个容器测试，使用自己的mynet！
+[root@VM-8-12-centos ~]# docker run -d -P --name tomcat-net-01 --net mynet tomcat
+66e72aeb6edde2de868ec0564383668d979b67e61d9aca3b68b709fa1bd365a5
+[root@VM-8-12-centos ~]# docker run -d -P --name tomcat-net-02 --net mynet tomcat
+1ff8c1115d7474de6854a0287ebdaebf00d7e21d2909fb72fcde9f45ce4896e8
+[root@VM-8-12-centos ~]# docker ps
+CONTAINER ID   IMAGE     COMMAND             CREATED          STATUS          PORTS                                         NAMES
+1ff8c1115d74   tomcat    "catalina.sh run"   5 seconds ago    Up 4 seconds    0.0.0.0:32777->8080/tcp, :::32777->8080/tcp   tomcat-net-02
+66e72aeb6edd   tomcat    "catalina.sh run"   35 seconds ago   Up 34 seconds   0.0.0.0:32776->8080/tcp, :::32776->8080/tcp   tomcat-net-01
+# 再来查看
+[root@VM-8-12-centos ~]# docker network inspect mynet
+[
+    {
+        "Name": "mynet",
+        "Id": "0f1f3d67efa104777f3e51370178536c0d4fc7ec8894013e9b4cbf0679332f94",
+        "Created": "2023-09-21T20:40:44.565062552+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "192.168.0.0/16",
+                    "Gateway": "192.168.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "1ff8c1115d7474de6854a0287ebdaebf00d7e21d2909fb72fcde9f45ce4896e8": {
+                "Name": "tomcat-net-02",
+                "EndpointID": "d5cef7778f06f9d7e826788e202b66c050f8c2c3e9d1af3fac5e703cece1d3fd",
+                "MacAddress": "02:42:c0:a8:00:03",
+                "IPv4Address": "192.168.0.3/16",
+                "IPv6Address": ""
+            },
+            "66e72aeb6edde2de868ec0564383668d979b67e61d9aca3b68b709fa1bd365a5": {
+                "Name": "tomcat-net-01",
+                "EndpointID": "2d16cca97caee503756e1f027f2335874f9393f9c91be5bc78a831cfe316c6ba",
+                "MacAddress": "02:42:c0:a8:00:02",
+                "IPv4Address": "192.168.0.2/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {},
+        "Labels": {}
+    }
+]
+```
