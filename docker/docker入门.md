@@ -1937,3 +1937,235 @@ CONTAINER ID   IMAGE     COMMAND             CREATED          STATUS          PO
     }
 ]
 ```
+```shell
+[root@VM-8-12-centos apphub-linux-amd64]# docker exec -it tomcat-net-01 ping 192.168.0.1
+PING 192.168.0.1 (192.168.0.1) 56(84) bytes of data.
+64 bytes from 192.168.0.1: icmp_seq=1 ttl=64 time=0.084 ms
+64 bytes from 192.168.0.1: icmp_seq=2 ttl=64 time=0.052 ms
+
+[root@VM-8-12-centos apphub-linux-amd64]# docker exec -it tomcat-net-01 ping tomcat-net-02
+PING tomcat-net-02 (192.168.0.3) 56(84) bytes of data.
+64 bytes from tomcat-net-02.mynet (192.168.0.3): icmp_seq=1 ttl=64 time=0.093 ms
+64 bytes from tomcat-net-02.mynet (192.168.0.3): icmp_seq=2 ttl=64 time=0.061 ms
+
+# 发现，我们自定义的网络docker都已经帮我们维护好了对应的关系
+# 所有我们平时都可以这样使用网络，不使用--link效果一样，所有东西实时维护好，直接域名ping通。
+```
+聊了这么多，我们现在应该可以深刻理解docker的网络了！
+
+#### 网络连通
+---
+![](../images/Pasted%20image%2020230922164247.png)
+
+docker0和自定义网络肯定不通，我们使用自定义网络的好处就是网络隔离：
+
+大家公司项目部署的业务都非常多，假设我们有一个商城，我们会有订单业务（操作不同数据），会有订单业务购物车业务（操作不同缓存）。如果在一个网络下，有的程序员的恶魔代码就不能防止了，所以我们就在部署的时候网络隔离，创建两个桥接网卡，比如订单业务（里面的数据库，redis，mq，全部业务   都在order-net网络下）其他业务在其他网络。
+
+那关键的问题来了，如何让tomcat-net-01访问tomcat01？
+```shell
+# 启动默认的容器，在docker0网络下
+[root@VM-8-12-centos ~]# docker run -d -P --name tomcat01 tomcat
+4319ff96c974a83155ed8148234e95111d6cd09e09389946e9c3a7ec7b209229
+[root@VM-8-12-centos ~]# docker run -d -P --name tomcat02 tomcat
+f7672012cc94bb0a760c50b51dfab16ff7d7104d2c4da6241b119bdb1a907840
+[root@VM-8-12-centos ~]# docker ps   # 查看当前容器
+CONTAINER ID   IMAGE     COMMAND             CREATED          STATUS          PORTS                                         NAMES
+f7672012cc94   tomcat    "catalina.sh run"   4 seconds ago    Up 4 seconds    0.0.0.0:32779->8080/tcp, :::32779->8080/tcp   tomcat02
+4319ff96c974   tomcat    "catalina.sh run"   29 seconds ago   Up 28 seconds   0.0.0.0:32778->8080/tcp, :::32778->8080/tcp   tomcat01
+1ff8c1115d74   tomcat    "catalina.sh run"   20 hours ago     Up 20 hours     0.0.0.0:32777->8080/tcp, :::32777->8080/tcp   tomcat-net-02
+66e72aeb6edd   tomcat    "catalina.sh run"   20 hours ago     Up 20 hours     0.0.0.0:32776->8080/tcp, :::32776->8080/tcp   tomcat-net-01
+
+# 我们来查看下network帮助，发现一个命令 connect
+[root@VM-8-12-centos ~]# docker network --help
+Commands:
+  connect     Connect a container to a network
+  create      Create a network
+  disconnect  Disconnect a container from a network
+  inspect     Display detailed information on one or more networks
+  ls          List networks
+  prune       Remove all unused networks
+  rm          Remove one or more networks
+
+# 我们来测试一下！打通mynet-docker0
+# 命令 docker network connect [OPTIONS] NETWORK CONTANER
+
+[root@VM-8-12-centos ~]# docker network connect mynet tomcat01
+[root@VM-8-12-centos ~]# docker network inspect mynet
+[
+    {
+		...
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "1ff8c1115d7474de6854a0287ebdaebf00d7e21d2909fb72fcde9f45ce4896e8": {
+                "Name": "tomcat-net-02",
+                "EndpointID": "d5cef7778f06f9d7e826788e202b66c050f8c2c3e9d1af3fac5e703cece1d3fd",
+                "MacAddress": "02:42:c0:a8:00:03",
+                "IPv4Address": "192.168.0.3/16",
+                "IPv6Address": ""
+            },
+            // 发现我们的tomcat就进来这里了，tomcat01拥有了双ip
+            "4319ff96c974a83155ed8148234e95111d6cd09e09389946e9c3a7ec7b209229": {
+                "Name": "tomcat01",
+                "EndpointID": "f54b118043e1f210a2130243dcc09d96d469f0b0d42af58e25a1fb2ffe1096e6",
+                "MacAddress": "02:42:c0:a8:00:04",
+                "IPv4Address": "192.168.0.4/16",
+                "IPv6Address": ""
+            },
+            "66e72aeb6edde2de868ec0564383668d979b67e61d9aca3b68b709fa1bd365a5": {
+                "Name": "tomcat-net-01",
+                "EndpointID": "2d16cca97caee503756e1f027f2335874f9393f9c91be5bc78a831cfe316c6ba",
+                "MacAddress": "02:42:c0:a8:00:02",
+                "IPv4Address": "192.168.0.2/16",
+                "IPv6Address": ""
+            }
+        },
+	    ...
+    }
+]
+
+# tomcat01 可以ping通了
+[root@VM-8-12-centos ~]# docker exec -it tomcat01 ping tomcat-net-01
+PING tomcat-net-01 (192.168.0.2) 56(84) bytes of data.
+64 bytes from tomcat-net-01.mynet (192.168.0.2): icmp_seq=1 ttl=64 time=0.069 ms
+64 bytes from tomcat-net-01.mynet (192.168.0.2): icmp_seq=2 ttl=64 time=0.049 ms
+
+# tomcat02 依旧ping不通，大家应该就理解了
+[root@VM-8-12-centos ~]# docker exec -it tomcat02 ping tomcat-net-01
+ping: tomcat-net-01: Name or service not known
+```
+结论：如果要跨网络操作别人，就需要使用`docker network connect [OPTIONS] NETWORK CONTAINER`连接
+
+#### 实战：部署一个Redis集群
+![](../images/Pasted%20image%2020230922174912.png)
+
+```
+# 创建网卡
+docker network create redis --subnet 172.38.0.0/16
+
+# 通过脚本创建六个redis配置
+for port in $(seq 1 6); \
+do \
+mkdir -p /mydata/redis/node-${port}/conf
+touch /mydata/redis/node-${port}/conf/redis.conf
+cat << EOF >/mydata/redis/node-${port}/conf/redis.conf
+port 6379
+bind 0.0.0.0
+cluster-enabled yes
+cluster-config-file nodes.conf
+cluster-node-timeout 5000
+cluster-announce-ip 172.38.0.1${port}
+cluster-announce-port 6379
+cluster-announce-bus-port 16379
+appendonly yes
+EOF
+done
+
+docker run -p 637${port}:6379 -p 1637${port}:16379 --name redis-${port} \ -v /mydata/redis/node-${port}/data:/data \
+-v /mydata/redis/node-${port}/conf/redis.conf:/etc/redis/redis.conf \
+-d --net redis --ip 172.38.0.1${port} redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf; \
+
+# 启动6个容器
+docker run -p 6371:6379 -p 16371:16379 --name redis-1 \
+-v /mydata/redis/node-1/data:/data \
+-v /mydata/redis/node-1/conf/redis.conf:/etc/redis/redis.conf \
+-d --net redis --ip 172.38.0.11 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf
+
+docker run -p 6376:6379 -p 16376:16379 --name redis-6 \
+-v /mydata/redis/node-6/data:/data \
+-v /mydata/redis/node-6/conf/redis.conf:/etc/redis/redis.conf \
+-d --net redis --ip 172.38.0.16 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf
+
+# 进入一个redis，注意这里是 sh命令 
+docker exec -it redis-1 /bin/sh
+
+# 创建集群
+redis-cli --cluster create 172.38.0.11:6379 172.38.0.12:6379 172.38.0.13:6379 172.38.0.14:6379 172.38.0.15:6379 172.38.0.16:6379 --cluster-replicas 1
+
+# 连接集群
+redis-cli -c
+
+# 查看集群信息
+cluster info
+
+# 查看节点
+cluster nodes
+
+# set a b
+# 停止到存值的容器
+# 然后再次get a， 发现依旧可以获取值
+# 查看节点，发现高可用完全没问题
+```
+
+#### IDEA整合Docker
+##### 创建项目
+1、使用idea构建一个Spring boot项目
+2、编写一个helloController
+```shell
+@Controller  
+@RequestMapping("")  
+public class HelloController {  
+    @GetMapping("/hello")  
+    @ResponseBody  
+    public String hello() {  
+  
+        return "hello world";  
+    }  
+}
+```
+3、启动测试下，端口修改下，避免8080冲突！本地访问没有问题就可以！
+4、打jar包
+![](../images/Pasted%20image%2020230922213735.png)
+有了jar包，我们就可以做镜像了！记得测试一下jar包可以使用吗！
+
+##### 打包镜像
+1、在项目下编写Dockerfile 文件，将打包好的jar包拷贝到Dockerfile同级目录
+```dockerfile
+FROM java:8
+
+# 服务器只有dockerfile和jar的同级目录
+COPY *.jar /app.jar
+
+CMD["--server.port=8080"]
+
+# 指定容器内要暴露的端口
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "/app.jar"]
+```
+
+2、将Dockerfile 和项目的 jar 包上传到服务器上，构建运行
+```shell
+[root@VM-8-12-centos idea]# ll
+total 17204
+-rw-r--r-- 1 root root 17609343 Sep 22 21:52 app.jar
+-rw-r--r-- 1 root root      210 Sep 22 21:52 Dockerfile
+
+# 构建镜像
+docker build -t idea-k .
+
+# 查看镜像
+docker images
+
+# 运行
+docker run -d -P --name idea-ks idea-ks
+
+[root@VM-8-12-centos idea]# docker ps
+CONTAINER ID   IMAGE     COMMAND                  CREATED         STATUS         PORTS                                         NAMES
+852559dd2dc0   idea-ks   "java -jar /app.jar …"   8 seconds ago   Up 7 seconds   0.0.0.0:32781->8888/tcp, :::32781->8888/tcp   idea-ks
+
+# 测试访问
+[root@VM-8-12-centos idea]# curl localhost:32781
+{"timestamp":"2023-09-22T14:35:35.700+00:00","status":404,"error":"Not Found","path":"/"}
+[root@VM-8-12-centos idea]# curl localhost:32781/hello
+hello world
+```
+
+#### IDEA安装插件
+了解即可！以后CI/CD，就完全没有必要这样做！
+1、IDEA安装插件
+![](../images/Pasted%20image%2020230922224002.png)
+2、配置Docker连接集成
+![](../images/Pasted%20image%2020230922224031.png)
+3、集成了docker插件就可以在IDEA中操作Docker内部的容器和镜像了，但是很鸡肋这个功能，对于我们开发人员来说！
+之后学习的CI/CD才是真正在企业中的王道！

@@ -8,26 +8,14 @@
         "type": "tabs",
         "children": [
           {
-            "id": "cdcb1e437db851c9",
+            "id": "5900ae48f99d828f",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docker/docker入门.md",
+                "file": "idea/取消idea默认打开工程.md",
                 "mode": "source",
                 "source": false
-              }
-            }
-          },
-          {
-            "id": "c30fc9e7ee91aa79",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "linux/查看Docker容器ip时报错.md",
-                "mode": "source",
-                "source": true
               }
             }
           }
@@ -98,7 +86,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "docker/docker入门.md",
+                "file": "idea/取消idea默认打开工程.md",
                 "collapseAll": true,
                 "extraContext": true,
                 "sortOrder": "alphabetical",
@@ -115,7 +103,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "docker/docker入门.md",
+                "file": "idea/取消idea默认打开工程.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -138,7 +126,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "docker/docker入门.md"
+                "file": "idea/取消idea默认打开工程.md"
               }
             }
           },
@@ -171,26 +159,32 @@
       "audio-recorder:开始/结束录音": false
     }
   },
-  "active": "cdcb1e437db851c9",
+  "active": "5900ae48f99d828f",
   "lastOpenFiles": [
-    "linux/查看Docker容器ip时报错.md",
-    "docker/docker入门.md",
-    "images/Pasted image 20230921203739.png",
-    "linux/Dockerdockerfile创建centos镜像失败：ERROR RUN yum -y install vim.md",
+    "images/Pasted image 20230922225306.png",
+    "images/Pasted image 20230922224854.png",
+    "springboot/运行报404合集.md",
+    "idea/取消idea默认打开工程.md",
+    "idea/未命名",
+    "images/Pasted image 20230922224536.png",
+    "docker/Dockerfile文件名错误.md",
     "未命名.canvas",
-    "docker/未命名.md",
+    "docker/docker入门.md",
+    "images/Pasted image 20230922224031.png",
+    "images/Pasted image 20230922224002.png",
+    "images/Pasted image 20230922222620.png",
+    "linux/查看Docker容器ip时报错.md",
+    "linux/centos安装java.md",
+    "springboot",
+    "images/Pasted image 20230922213735.png",
+    "images/Pasted image 20230922174912.png",
+    "images/Pasted image 20230922164247.png",
+    "linux/Dockerdockerfile创建centos镜像失败：ERROR RUN yum -y install vim.md",
+    "images/Pasted image 20230921203739.png",
     "未命名 2.canvas",
     "未命名 1.canvas",
     "2023-09-21.md",
     "images/Pasted image 20230921200414.png",
-    "images/Pasted image 20230921160608.png",
-    "images/Pasted image 20230921155928.png",
-    "images/Pasted image 20230921141215.png",
-    "images/Pasted image 20230920231421.png",
-    "images/Pasted image 20230920171601.png",
-    "images/Pasted image 20230920163319.png",
-    "images/Pasted image 20230920163219.png",
-    "images/Pasted image 20230920163010.png",
     "linux/Ubuntu安装配置yum.md",
     "linux",
     "docker",
