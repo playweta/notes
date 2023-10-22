@@ -104,7 +104,7 @@ yum install docker-ce docker-ce-cli containerd.io
 
 9、启动Docker
 ```shell
-system start docker
+systemctl start docker
 ```
 10、测试命令
 ```shell
@@ -2169,3 +2169,85 @@ hello world
 ![](../images/Pasted%20image%2020230922224031.png)
 3、集成了docker插件就可以在IDEA中操作Docker内部的容器和镜像了，但是很鸡肋这个功能，对于我们开发人员来说！
 之后学习的CI/CD才是真正在企业中的王道！
+
+---
+### DockerCompose
+##### 简介
+Docker
+DockerFile build run 手动操作，单个容器！
+微服务。100个微服务！依赖关系。
+Docker Compose 来轻松高效的管理容器。定义运行多个容器
+>官方介绍
+
+定义、运行多个容器。
+YAML file 配置文件。
+single command。命令有哪些？
+Compose is a tool for deﬁning and running multi-container Docker applications. With Compose, you use a YAML ﬁle to conﬁgure your application’s services. Then, with a single command, you create and start all the services from your conﬁguration. To learn more about all the features of Compose, see the list of features.
+所有的环境都可以使用 Compose。
+Compose works in all environments: production, staging, development, testing, as well as CI workﬂows. You can learn more about each case in Common Use Cases.
+###### 三步骤：
+Using Compose is basically a three-step process:
+1. Deﬁne your app’s environment with a Dockerfile  so it can be reproduced anywhere.
+	* Dockerﬁle 保证我们的项目在任何地方可以运行。
+2. Deﬁne the services that make up your app in docker-compose.yml  so they can be run together in an isolated environment.
+	* services  什么是服务。 
+	* docker-compose.yml 这个文件怎么写！
+3. Run docker-compose up  and Compose starts and runs your entire app.
+	* 启动项目
+
+作用：批量容器编排
+>我自己理解
+
+Compose 是 Docker 官方的开源项目。需要安装！
+`Dockerfile`让程序在任何地方运行。web服务。redis、mysql、nginx ... 多个容器。run Compose
+```shell
+version: '2.0' 
+services:
+  web:
+    build: .
+    ports:
+    - "5000:5000"
+    volumes:
+    - .:/code
+    - logvolume01:/var/log 
+    links:
+    - redis
+  redis:
+    image: redis 
+volumes:
+  logvolume01: {}
+```
+
+docker-compose up 100个服务。
+Compose：重要概念。
+* 服务service，容器。应用。（web、redis、mysql....）
+* 项目project。一组关联的容器。博客。web、mysql。
+
+##### 安装
+1、下载
+![](../images/Pasted%20image%2020230923154839.png)
+![](../images/Pasted%20image%2020230923154859.png)
+![](../images/Pasted%20image%2020230923154824.png)
+2、授权
+```shell
+sudo chmod +x /usr/local/bin/docker-compose
+```
+![](../images/Pasted%20image%2020230923155050.png)
+
+多看官网
+##### 体验
+地址：https://docs.docker.com/compose/gettingstarted/ 
+python 应用。计算器。redis！
+
+1、应用 app.py
+2、Dockerfile 应用打包为镜像
+3、Docker-compose yaml文件（定义整个服务，需要的环境。web、redis）完整的上线服务！
+4、启动compose服务（docker-compose up）
+
+流程：
+1、创建网络
+2、执行 Docker-compose yaml
+3、启动服务。
+Docker-compose yaml
+Creating composetest_web_1  ...done
+Creating composetest_redis_1   ...done

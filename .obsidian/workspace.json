@@ -4,22 +4,35 @@
     "type": "split",
     "children": [
       {
-        "id": "92ca48a40159e5db",
+        "id": "5e001659df7489e7",
         "type": "tabs",
         "children": [
           {
-            "id": "5900ae48f99d828f",
+            "id": "1b84933262a1642e",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "idea/取消idea默认打开工程.md",
+                "file": "docker/docker入门.md",
+                "mode": "source",
+                "source": false
+              }
+            }
+          },
+          {
+            "id": "ab049a9c50c6bffa",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "docker/Docker安装elasticsearch、kibana和logstash,实现ELK.md",
                 "mode": "source",
                 "source": false
               }
             }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -48,7 +61,7 @@
             "state": {
               "type": "search",
               "state": {
-                "query": "20200627191550453",
+                "query": "",
                 "matchingCase": false,
                 "explainSearch": false,
                 "collapseAll": false,
@@ -86,7 +99,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "idea/取消idea默认打开工程.md",
+                "file": "docker/Docker安装elasticsearch、kibana和logstash,实现ELK.md",
                 "collapseAll": true,
                 "extraContext": true,
                 "sortOrder": "alphabetical",
@@ -103,7 +116,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "idea/取消idea默认打开工程.md",
+                "file": "docker/Docker安装elasticsearch、kibana和logstash,实现ELK.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -126,7 +139,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "idea/取消idea默认打开工程.md"
+                "file": "docker/Docker安装elasticsearch、kibana和logstash,实现ELK.md"
               }
             }
           },
@@ -141,12 +154,11 @@
             }
           }
         ],
-        "currentTab": 4
+        "currentTab": 3
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 379.5
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -159,32 +171,39 @@
       "audio-recorder:开始/结束录音": false
     }
   },
-  "active": "5900ae48f99d828f",
+  "active": "ab049a9c50c6bffa",
   "lastOpenFiles": [
-    "images/Pasted image 20230922225306.png",
-    "images/Pasted image 20230922224854.png",
+    "images/Pasted image 20231022151300.png",
+    "images/Pasted image 20231022151236.png",
+    "images/Pasted image 20231021175009.png",
+    "docker/docker入门.md",
+    "docker/Docker安装elasticsearch、kibana和logstash,实现ELK.md",
     "springboot/运行报404合集.md",
+    "docker/Docker安装redis.md",
+    "images/Pasted image 20231018124452.png",
+    "images/Pasted image 20231018124423.png",
+    "images/Pasted image 20231018124353.png",
+    "images/Pasted image 20231018124329.png",
+    "images/Pasted image 20231018114549.png",
+    "images/Pasted image 20231018114530.png",
+    "images/Pasted image 20231018114503.png",
+    "images/Pasted image 20231018114410.png",
+    "docker/Docker搭建MySql并挂载数据.md",
+    "本科毕业论文/参考书籍.md",
+    "linux/vmware克隆虚拟机.md",
+    "本科毕业论文",
+    "linux/vmware安装centos.md",
     "idea/取消idea默认打开工程.md",
     "idea/未命名",
-    "images/Pasted image 20230922224536.png",
     "docker/Dockerfile文件名错误.md",
     "未命名.canvas",
-    "docker/docker入门.md",
-    "images/Pasted image 20230922224031.png",
-    "images/Pasted image 20230922224002.png",
-    "images/Pasted image 20230922222620.png",
     "linux/查看Docker容器ip时报错.md",
     "linux/centos安装java.md",
     "springboot",
-    "images/Pasted image 20230922213735.png",
-    "images/Pasted image 20230922174912.png",
-    "images/Pasted image 20230922164247.png",
     "linux/Dockerdockerfile创建centos镜像失败：ERROR RUN yum -y install vim.md",
-    "images/Pasted image 20230921203739.png",
     "未命名 2.canvas",
     "未命名 1.canvas",
     "2023-09-21.md",
-    "images/Pasted image 20230921200414.png",
     "linux/Ubuntu安装配置yum.md",
     "linux",
     "docker",
@@ -201,7 +220,6 @@
     "k8s/Redis Chart参数说明.md",
     "k8s/kubectl资源类型与别名.md",
     "images",
-    "软件破解",
-    "2023-09-06.md"
+    "软件破解"
   ]
 }

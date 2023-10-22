@@ -6,5 +6,5 @@
   "newFileLocation": "current",
   "alwaysUpdateLinks": true,
   "showLineNumber": true,
-  "vimMode": true
+  "vimMode": false
 }
