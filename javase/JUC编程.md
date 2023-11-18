@@ -2226,6 +2226,7 @@ public class DeadLockDemo {
 2、使用`jstack 进程`找到死锁问题
 
 ![](../images/Pasted%20image%2020231118182921.png)
+
 面试，工作中！ 排查问题： 
 1、日志  9
 2、堆栈  1
