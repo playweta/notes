@@ -13,7 +13,7 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "javase/JUC编程.md",
+                "file": "数据库/MySQL调优.md",
                 "mode": "source",
                 "source": false
               }
@@ -86,7 +86,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "javase/JUC编程.md",
+                "file": "数据库/MySQL调优.md",
                 "collapseAll": true,
                 "extraContext": true,
                 "sortOrder": "alphabetical",
@@ -103,7 +103,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "javase/JUC编程.md",
+                "file": "数据库/MySQL调优.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -126,7 +126,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "javase/JUC编程.md"
+                "file": "数据库/MySQL调优.md"
               }
             }
           },
@@ -161,22 +161,31 @@
   },
   "active": "b41ed98c2576d473",
   "lastOpenFiles": [
-    "images/Pasted image 20231118182921.png",
-    "images/Pasted image 20231118182818.png",
-    "images/Pasted image 20231118182200.png",
-    "images/Pasted image 20231118182121.png",
-    "images/Pasted image 20231118181020.png",
-    "images/Pasted image 20231118175434.png",
-    "images/Pasted image 20231118175336.png",
-    "images/Pasted image 20231118175049.png",
-    "images/Pasted image 20231118172939.png",
-    "images/Pasted image 20231118172706.png",
-    "images/Pasted image 20231118172654.png",
+    "images/Pasted image 20231126125116.png",
+    "images/Pasted image 20231126125051.png",
+    "images/Pasted image 20231126123714.png",
+    "images/Pasted image 20231126123706.png",
+    "images/Pasted image 20231126123526.jpg",
+    "images/Pasted image 20231126123424.png",
+    "数据库/yuque_diagram (1).jpg",
+    "数据库/yuque_diagram (1).jpg.crdownload",
+    "images/Pasted image 20231126123310.jpg",
+    "images/Pasted image 20231126123259.jpg",
+    "images/Pasted image 20231126123251.png",
+    "数据库/yuqueaaa_diagram.jpg",
+    "数据库/yuqueaaa_diagram.jpg.crdownload",
+    "数据库/yuque_diagram.jpg.crdownload",
+    "images/qnxql079alg2ghhz.mind",
+    "数据库/徐庶—MySQL调优实践最全!必懂!知识点一站式掌握.pdf",
+    "数据库/进阶.pdf",
+    "数据库/pc安装mysql.md",
+    "数据库/MySQL调优.md",
+    "数据库",
+    "javase/JUC编程.md",
     "未命名.canvas",
     "web3/XRC20的一些常用网址导航.md",
     "web3",
     "2023-11-17.md",
-    "javase/JUC编程.md",
     "javase",
     "docker/docker入门.md",
     "docker/Docker安装redis.md",
@@ -188,27 +197,18 @@
     "本科毕业论文",
     "linux/vmware安装centos.md",
     "idea/取消idea默认打开工程.md",
-    "idea/未命名",
     "docker/Dockerfile文件名错误.md",
     "linux/查看Docker容器ip时报错.md",
     "linux/centos安装java.md",
-    "springboot",
     "linux/Dockerdockerfile创建centos镜像失败：ERROR RUN yum -y install vim.md",
     "未命名 2.canvas",
     "未命名 1.canvas",
     "2023-09-21.md",
     "linux/Ubuntu安装配置yum.md",
-    "linux",
-    "docker",
     "软件破解/window修改软件安装位置.md",
-    "软件破解/images/CygUtils.plugin",
-    "软件破解/images",
     "软件破解/window激活.md",
     "软件破解/Navicat Premium 16破解.md",
     "软件破解/idea2023破解.md",
-    "软件破解/office365破解.md",
-    "k8s/k8s 的资源清单.md",
-    "k8s/安装Docker.md",
-    "images"
+    "软件破解/office365破解.md"
   ]
 }
